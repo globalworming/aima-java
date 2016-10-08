@@ -60,13 +60,13 @@ public class BiDirectionalBreadthFirstSearchTest {
     assertEquals(null, node.parent().parent().parent().parent());
   }
 
-  private <A, S> List<A> searchForActions(Problem<A, S> problem) {
+  private <A, S> List<A> searchSolutions(Problem<A, S> problem) {
     SearchForActionsFunction<A, S> searchForActionsFunction = new BiDirectionalBreadthFirstSearch<>();
     return searchForActionsFunction.apply(problem);
   }
 
-  private <A, S> List<A> searchHistory(Problem<A, S> problem,
-                                       StateActionTimeLine<String, String> timeLine) {
+  private <A, S> List<A> searchSolution(Problem<A, S> problem,
+                                        StateActionTimeLine<String, String> timeLine) {
     BiDirectionalBreadthFirstSearch<A, S> biBfs= new BiDirectionalBreadthFirstSearch<>();
     biBfs.register(timeLine);
     return biBfs.apply(problem);
@@ -75,7 +75,7 @@ public class BiDirectionalBreadthFirstSearchTest {
   @Test
   public void arad2arad() {
     Assert.assertEquals(Arrays.asList((String) null),
-        searchForActions(romaniaRoadMapProblem(ARAD, ARAD)));
+        searchSolutions(romaniaRoadMapProblem(ARAD, ARAD)));
   }
 
   @Test
@@ -83,7 +83,7 @@ public class BiDirectionalBreadthFirstSearchTest {
     Assert.assertEquals(
         Arrays.asList(
             new GoAction(SIBIU)),
-        searchForActions(romaniaRoadMapProblem(ARAD, SIBIU)));
+        searchSolutions(romaniaRoadMapProblem(ARAD, SIBIU)));
   }
 
   @Test
@@ -92,7 +92,7 @@ public class BiDirectionalBreadthFirstSearchTest {
         Arrays.asList(
             new GoAction(SIBIU),
             new GoAction(FAGARAS)),
-        searchForActions(romaniaRoadMapProblem(ARAD, FAGARAS)));
+        searchSolutions(romaniaRoadMapProblem(ARAD, FAGARAS)));
   }
 
   @Test
@@ -102,12 +102,12 @@ public class BiDirectionalBreadthFirstSearchTest {
             new GoAction(SIBIU),
             new GoAction(FAGARAS),
             new GoAction(BUCHAREST)),
-        searchForActions(romaniaRoadMapProblem(ARAD, BUCHAREST)));
+        searchSolutions(romaniaRoadMapProblem(ARAD, BUCHAREST)));
   }
 
   @Test
   public void arad2bucharestTimeLine() {
-    List<GoAction> goActions = searchForActions(romaniaRoadMapProblem(ARAD, BUCHAREST));
+    List<GoAction> goActions = searchSolutions(romaniaRoadMapProblem(ARAD, BUCHAREST));
     Assert.assertEquals(
         Arrays.asList(
             new GoAction(SIBIU),
@@ -128,7 +128,7 @@ public class BiDirectionalBreadthFirstSearchTest {
             new GoAction(VASLUI),
             new GoAction(IASI),
             new GoAction(NEAMT)),
-        searchForActions(romaniaRoadMapProblem(ARAD, NEAMT)));
+        searchSolutions(romaniaRoadMapProblem(ARAD, NEAMT)));
   }
 
  @Test
@@ -140,12 +140,12 @@ public class BiDirectionalBreadthFirstSearchTest {
             new GoAction(BUCHAREST),
             new GoAction(URZICENI)
         ),
-        searchForActions(romaniaRoadMapProblem(ARAD, URZICENI)));
+        searchSolutions(romaniaRoadMapProblem(ARAD, URZICENI)));
   }
 
   @Test
   public void timisoara2aradOrZerind() {
-    List<GoAction> actual = searchForActions(romaniaRoadMapProblem(TIMISOARA, ARAD, ZERIND));
+    List<GoAction> actual = searchSolutions(romaniaRoadMapProblem(TIMISOARA, ARAD, ZERIND));
     List<GoAction> expected;
     if (actual.contains(new GoAction(ZERIND))) {
       expected = Arrays.asList(new GoAction(ZERIND));
@@ -163,10 +163,10 @@ public class BiDirectionalBreadthFirstSearchTest {
     boolean printDebug = true;
     if (printDebug) {
       StateActionTimeLine<String, String> timeLine = new StateActionTimeLine<>();
-      actual = searchHistory(romaniaRoadMapProblem(TIMISOARA, BUCHAREST, CRAIOVA), timeLine);
+      actual = searchSolution(romaniaRoadMapProblem(TIMISOARA, BUCHAREST, CRAIOVA), timeLine);
       printTimeLine(timeLine);
     } else {
-      actual = searchForActions(romaniaRoadMapProblem(TIMISOARA, BUCHAREST, CRAIOVA));
+      actual = searchSolutions(romaniaRoadMapProblem(TIMISOARA, BUCHAREST, CRAIOVA));
     }
 
     List<GoAction> expected;
@@ -194,7 +194,7 @@ public class BiDirectionalBreadthFirstSearchTest {
   public void arad2oreda() {
 
     List<GoAction> expected;
-    List<GoAction> actual = searchForActions(romaniaRoadMapProblem(ARAD, ORADEA));
+    List<GoAction> actual = searchSolutions(romaniaRoadMapProblem(ARAD, ORADEA));
 
     // has two possible results
     if (actual.contains(new GoAction(ZERIND))) {
