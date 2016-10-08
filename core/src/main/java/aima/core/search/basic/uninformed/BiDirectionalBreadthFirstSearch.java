@@ -79,9 +79,9 @@ public class BiDirectionalBreadthFirstSearch<A, S> implements SearchForActionsFu
         if (_solution.isPresent()) {
           return solution(_solution.get());
         }
-        nextNodeFromFrontier = searchDirection.frontier.peek();
         rememberEvent("remove from frontier " + nodeToExpand.state(), searchDirection.fromStartToGoal);
         searchDirection.frontier.remove(nodeToExpand);
+        nextNodeFromFrontier = searchDirection.frontier.peek();
       }
       rememberEvent("abort search, frontier is empty", searchDirection.fromStartToGoal);
       return null;
