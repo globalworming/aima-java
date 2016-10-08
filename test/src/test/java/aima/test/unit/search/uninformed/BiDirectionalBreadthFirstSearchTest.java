@@ -119,6 +119,19 @@ public class BiDirectionalBreadthFirstSearchTest {
 
   @Test
   public void arad2neamt() {
+
+    List<GoAction> actual;
+    // enable to run with "logging"
+    boolean printDebug = true;
+    if (printDebug) {
+      StateActionTimeLine<String, String> timeLine = new StateActionTimeLine<>();
+      actual = searchSolution(romaniaRoadMapProblem(ARAD, NEAMT), timeLine);
+      printTimeLine(timeLine);
+    } else {
+      actual = searchSolutions(romaniaRoadMapProblem(ARAD, NEAMT));
+    }
+
+
     Assert.assertEquals(
         Arrays.asList(
             new GoAction(SIBIU),
@@ -128,7 +141,7 @@ public class BiDirectionalBreadthFirstSearchTest {
             new GoAction(VASLUI),
             new GoAction(IASI),
             new GoAction(NEAMT)),
-        searchSolutions(romaniaRoadMapProblem(ARAD, NEAMT)));
+        actual);
   }
 
  @Test
@@ -141,6 +154,8 @@ public class BiDirectionalBreadthFirstSearchTest {
             new GoAction(URZICENI)
         ),
         searchSolutions(romaniaRoadMapProblem(ARAD, URZICENI)));
+
+
   }
 
   @Test
@@ -160,7 +175,7 @@ public class BiDirectionalBreadthFirstSearchTest {
 
     List<GoAction> actual;
     // enable to run with "logging"
-    boolean printDebug = true;
+    boolean printDebug = false;
     if (printDebug) {
       StateActionTimeLine<String, String> timeLine = new StateActionTimeLine<>();
       actual = searchSolution(romaniaRoadMapProblem(TIMISOARA, BUCHAREST, CRAIOVA), timeLine);
@@ -170,13 +185,20 @@ public class BiDirectionalBreadthFirstSearchTest {
     }
 
     List<GoAction> expected;
-    // two solutions valid
-    if (actual.contains(new GoAction(ARAD))) {
+    // three solutions valid
+    if (actual.contains(new GoAction(FAGARAS))) {
       expected = Arrays.asList(
           new GoAction(ARAD),
           new GoAction(SIBIU),
           new GoAction(FAGARAS),
           new GoAction(BUCHAREST)
+      );
+    } else if (actual.contains(new GoAction(RIMNICU_VILCEA))) {
+      expected = Arrays.asList(
+          new GoAction(ARAD),
+          new GoAction(SIBIU),
+          new GoAction(RIMNICU_VILCEA),
+          new GoAction(CRAIOVA)
       );
     } else {
       expected = Arrays.asList(
@@ -255,14 +277,21 @@ public class BiDirectionalBreadthFirstSearchTest {
 
   private void printTimeLine(StateActionTimeLine<String, String> timeLine) {
     StringBuilder sb = new StringBuilder();
-    timeLine.stream()
+    for (StateActionTimeLine.MyEntry key : timeLine) {
+      sb.append(key.time).append(",\t")
+          .append("process-").append(key.processId).append(",\t")
+          .append(key.state).append(",\t")
+          .append(key.action).append("\n");
+    }
+
+   /* timeLine.stream()
       .sorted((o1, o2) -> Long.compare(o1.time, o2.time))
       .forEachOrdered(key -> {
         sb.append(key.time).append(",\t")
             .append("process-").append(key.processId).append(",\t")
             .append(key.state).append(",\t")
             .append(key.action).append("\n");
-    });
+    });*/
     System.out.print(sb.toString());
   }
 

@@ -1,29 +1,30 @@
 package aima.core.search.basic.uninformed;
 
+import aima.core.search.api.DefinedGoalStatesProblem;
 import aima.core.search.api.Node;
 import aima.core.search.api.NodeFactory;
 import aima.core.search.api.Problem;
-import aima.core.search.api.DefinedGoalStatesProblem;
 import aima.core.search.api.SearchController;
 import aima.core.search.api.SearchForActionsFunction;
 import aima.core.search.basic.support.BasicNodeFactory;
 import aima.core.search.basic.support.BasicSearchController;
 import aima.core.search.basic.support.StateActionTimeLine;
 
-import java.util.HashSet;
+import java.util.AbstractMap.SimpleEntry;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.stream.Collectors;
+import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.stream.Stream;
 
 /**
  * find a solution by searching from a start and goals in parallel. When multiple solutions
  * exist, a random one is returned, see unit test arad2oreda. The processes expand states
  * parallel and check each others frontiers if they meet.
- *
+ * <p>
  * An optional {@link BiDirectionalBreadthFirstSearch#history} can be used for println debugging
  * but may slow down execution significantly
  *
@@ -56,10 +57,10 @@ public class BiDirectionalBreadthFirstSearch<A, S> implements SearchForActionsFu
     rememberEvent("addToFrontier: " + startNode.state(), true);
     fromStartFrontier.add(startNode);
     Queue<Node<A, S>> fromGoalFrontier = newFIFOQueue();
-    for (S state : problem.goalStates()) {
+    problem.goalStates().forEach(state -> {
       rememberEvent("addToFrontier: " + state, false);
       fromGoalFrontier.add(newRootNode(state, pathCost));
-    }
+    });
 
     // build two Searches
     SearchDirection fromStartToGoal = new SearchDirection(exploredFromStart, fromGoalFrontier,
@@ -75,20 +76,22 @@ public class BiDirectionalBreadthFirstSearch<A, S> implements SearchForActionsFu
       // our parallel searches meet
       while (nextNodeFromFrontier != null) {
         Node<A, S> nodeToExpand = nextNodeFromFrontier;
-        Optional<Node<A, S>> _solution = getSolution(problem, searchDirection, nodeToExpand);
+        Optional<SimpleEntry<Node<A, S>, Node<A, S>>> _solution = findMeetingNodes(problem,
+            searchDirection, nodeToExpand);
         if (_solution.isPresent()) {
-          return solution(_solution.get());
+          return solution(buildResultPath(_solution.get().getKey(), _solution.get().getValue(),
+              problem));
         }
-        rememberEvent("remove from frontier " + nodeToExpand.state(), searchDirection.fromStartToGoal);
+        rememberEvent("remove from frontier " + nodeToExpand.state(), searchDirection.forwardOrBackward);
         searchDirection.frontier.remove(nodeToExpand);
         nextNodeFromFrontier = searchDirection.frontier.peek();
       }
-      rememberEvent("abort search, frontier is empty", searchDirection.fromStartToGoal);
+      rememberEvent("abort search, frontier is empty", searchDirection.forwardOrBackward);
       return null;
     }).filter(result -> result != null).findFirst().orElse(failure());
   }
 
-  private Optional<Node<A, S>> getSolution(DefinedGoalStatesProblem<A, S> problem, SearchDirection
+  private Optional<SimpleEntry<Node<A, S>, Node<A, S>>> findMeetingNodes(DefinedGoalStatesProblem<A, S> problem, SearchDirection
       searchDirection, Node<A, S> nodeToExpand) {
 
     Queue<Node<A, S>> frontier = searchDirection.frontier;
@@ -96,16 +99,13 @@ public class BiDirectionalBreadthFirstSearch<A, S> implements SearchForActionsFu
     Set<S> exploredStates = searchDirection.exploredStates;
     Queue<Node<A, S>> otherFrontier = searchDirection.otherFrontier;
 
-    rememberEvent("expand " + nodeToExpand.state(), searchDirection.fromStartToGoal);
+    rememberEvent("expand " + nodeToExpand.state(), searchDirection.forwardOrBackward);
     return actions.parallelStream()
         // first filter for an action which leads to an leaf getting to an explored node of the
         // other tree
-        .filter(action -> addLeafReachesOtherBranch(exploredStates, frontier, otherFrontier,
-            newLeafNode(problem, nodeToExpand, action), searchDirection.fromStartToGoal))
-        .limit(1)
-        .collect(Collectors.toSet()).stream()
-        // then - if any - use this action to generate the meeting node and build the result
-        .map(action -> resultFromMeetingNodes(problem, searchDirection, newLeafNode(problem, nodeToExpand, action)))
+        .map(action -> meetingNodes(exploredStates, frontier, otherFrontier,
+            newLeafNode(problem, nodeToExpand, action), searchDirection.forwardOrBackward))
+        .filter(o -> o != null)
         .findFirst();
   }
 
@@ -121,42 +121,24 @@ public class BiDirectionalBreadthFirstSearch<A, S> implements SearchForActionsFu
 
   /**
    * add a new node to the frontier if the state is not explored
+   *
    * @return true when the new node reaches one of the other searchDirections branch
    */
-  private boolean addLeafReachesOtherBranch(Set<S> exploredStates,
-                                            Queue<Node<A, S>> thisFrontier,
-                                            Queue<Node<A, S>> otherFrontier,
-                                            Node<A, S> leaf,
-                                            boolean direction) {
-    rememberEvent("addToFrontier: " + leaf.state(), direction);
-    thisFrontier.add(leaf);
+  private SimpleEntry<Node<A, S>, Node<A, S>> meetingNodes(Set<S> exploredStates,
+                                                           Queue<Node<A, S>> thisFrontier,
+                                                           Queue<Node<A, S>> otherFrontier,
+                                                           Node<A, S> leaf,
+                                                           boolean direction) {
+    if (!exploredStates.contains(leaf.state())) {
+      rememberEvent("addToFrontier: " + leaf.state(), direction);
+      thisFrontier.add(leaf);
+    }
     if (exploredStates.contains(leaf.state())) {
-      return false;
+      return null;
     } else {
       exploredStates.add(leaf.state());
     }
-    return doMeet(leaf, otherFrontier, direction);
-  }
-
-  /**
-   * to merge the results of searchDirections, we get both nodes where there meet and apply the
-   * necessary actions to get one node to the root state of the other
-   */
-  private Node<A, S> resultFromMeetingNodes(DefinedGoalStatesProblem<A, S> problem,
-                                            SearchDirection searchDirection,
-                                            Node<A, S> leaf) {
-
-    boolean direction = searchDirection.fromStartToGoal;
-    Queue<Node<A, S>> otherLeafs = searchDirection.otherFrontier;
-    Node<A, S> nodeWithEqualState = findNodeWithEqualState(leaf, otherLeafs, direction);
-
-    rememberEvent("buildFromMeetingNode " + leaf.state(), direction);
-    if (direction) {
-      return buildResultPath(leaf, nodeWithEqualState, problem);
-    } else {
-      // reverse build order
-      return buildResultPath(nodeWithEqualState, leaf, problem);
-    }
+    return meetingNodes(leaf, otherFrontier, direction);
   }
 
   /**
@@ -171,12 +153,24 @@ public class BiDirectionalBreadthFirstSearch<A, S> implements SearchForActionsFu
         .orElse(null);
   }
 
-  private boolean doMeet(Node<A, S> leaf, Queue<Node<A, S>> otherFrontier, boolean direction) {
-    return findNodeWithEqualState(leaf, otherFrontier, direction) != null;
+  private SimpleEntry<Node<A, S>, Node<A, S>> meetingNodes(Node<A, S> leaf, Queue<Node<A, S>>
+      otherFrontier, boolean
+                                                               forward) {
+    Node<A, S> nodeWithEqualState = findNodeWithEqualState(leaf, otherFrontier, forward);
+    boolean nodesMeet = nodeWithEqualState != null;
+    if (nodesMeet) {
+      if (forward) {
+        return new SimpleEntry<>(leaf, nodeWithEqualState);
+      } else {
+        return new SimpleEntry<>(nodeWithEqualState, leaf);
+      }
+    }
+    return null;
   }
 
   /**
-   * merge the notes of a path from the start with a reversed path originating from the goal
+   * merge the notes of a path from the start with a reversed path originating from the goal by
+   * applying the necessary actions to get one node to the root state of the other
    */
   public Node<A, S> buildResultPath(Node<A, S> fromStartNode, Node<A, S> fromGoalNode,
                                     Problem<A, S> problem) {
@@ -215,7 +209,12 @@ public class BiDirectionalBreadthFirstSearch<A, S> implements SearchForActionsFu
   }
 
   public Set<S> newExploredSet() {
-    return new HashSet<>();
+    return new ConcurrentSkipListSet<S>() {
+      @Override
+      public Comparator<? super S> comparator() {
+        return (Comparator<S>) (o1, o2) -> o1.toString().compareTo(o2.toString());
+      }
+    };
   }
 
   public List<A> failure() {
@@ -242,20 +241,20 @@ public class BiDirectionalBreadthFirstSearch<A, S> implements SearchForActionsFu
     final Set<S> exploredStates;
     final Queue<Node<A, S>> otherFrontier;
     final Queue<Node<A, S>> frontier;
-    final boolean fromStartToGoal;
+    final boolean forwardOrBackward;
 
     /**
-     * @param exploredStates      remembers all explored states from this direction
-     * @param otherFrontier remembers all explored states from an other direction
-     * @param frontier            frontierNodes of the other direction to check against
-     * @param fromStartToGoal     indicator if a solution path needs to be reversed
+     * @param exploredStates    remembers all explored states from this direction
+     * @param otherFrontier     remembers all explored states from an other direction
+     * @param frontier          frontierNodes of the other direction to check against
+     * @param forwardOrBackward indicator if a solution path needs to be reversed
      */
     SearchDirection(Set<S> exploredStates, Queue<Node<A, S>> otherFrontier, Queue<Node<A, S>>
-        frontier, boolean fromStartToGoal) {
+        frontier, boolean forwardOrBackward) {
       this.exploredStates = exploredStates;
       this.otherFrontier = otherFrontier;
       this.frontier = frontier;
-      this.fromStartToGoal = fromStartToGoal;
+      this.forwardOrBackward = forwardOrBackward;
     }
   }
 }
