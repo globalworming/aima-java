@@ -150,7 +150,7 @@ public class BiDirectionalBreadthFirstSearch<A, S> implements SearchForActionsFu
     Queue<Node<A, S>> otherLeafs = searchDirection.otherFrontier;
     Node<A, S> nodeWithEqualState = findNodeWithEqualState(leaf, otherLeafs, direction);
 
-    rememberEvent("buildFromMeetinNode " + leaf.state(), direction);
+    rememberEvent("buildFromMeetingNode " + leaf.state(), direction);
     if (direction) {
       return buildResultPath(leaf, nodeWithEqualState, problem);
     } else {

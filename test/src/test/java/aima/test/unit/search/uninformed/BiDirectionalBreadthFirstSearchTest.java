@@ -45,13 +45,14 @@ public class BiDirectionalBreadthFirstSearchTest {
   public void mergeNodesTest() {
     Node<GoAction, InState> a = new MyTestNode(ARAD);
     Node<GoAction, InState> as = new MyTestNode(SIBIU, a);
-    Node<GoAction, InState> asp = new MyTestNode(RIMNICU_VILCEA, as);
+    Node<GoAction, InState> asr = new MyTestNode(RIMNICU_VILCEA, as);
 
     Node<GoAction, InState> p = new MyTestNode(PITESTI);
     Node<GoAction, InState> pr = new MyTestNode(RIMNICU_VILCEA, p);
 
     BiDirectionalBreadthFirstSearch<GoAction, InState> biBFS = new BiDirectionalBreadthFirstSearch<>();
-    Node<GoAction, InState> node = biBFS.buildResultPath(asp, pr, romaniaRoadMapProblem(ARAD, RIMNICU_VILCEA));
+    Node<GoAction, InState> node = biBFS.buildResultPath(asr, pr, romaniaRoadMapProblem(ARAD,
+        RIMNICU_VILCEA));
     assertEquals(new InState(PITESTI), node.state());
     assertEquals(new InState(RIMNICU_VILCEA), node.parent().state());
     assertEquals(new InState(SIBIU), node.parent().parent().state());
