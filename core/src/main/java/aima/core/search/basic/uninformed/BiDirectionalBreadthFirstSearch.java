@@ -16,8 +16,11 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Queue;
 import java.util.Set;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentSkipListSet;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ForkJoinPool;
 import java.util.stream.Stream;
 
 /**
@@ -41,7 +44,8 @@ public class BiDirectionalBreadthFirstSearch<A, S> implements SearchForActionsFu
    * @param problem to solve
    * @return list of actions to solve the problem
    */
-  public List<A> apply(DefinedGoalStatesProblem<A, S> problem) {
+  public List<A> apply(DefinedGoalStatesProblem<A, S> problem) throws ExecutionException,
+      InterruptedException {
 
     final int pathCost = 0;
     // initial check
@@ -68,27 +72,35 @@ public class BiDirectionalBreadthFirstSearch<A, S> implements SearchForActionsFu
     SearchDirection fromGoalToStart = new SearchDirection(exploredFromGoal, fromStartFrontier,
         fromGoalFrontier, false);
 
-    // execute in parallel and return the first result one finds
-    return Stream.of(fromStartToGoal, fromGoalToStart).parallel().map(searchDirection -> {
-      // initial check of the frontier
-      Node<A, S> nextNodeFromFrontier = searchDirection.frontier.peek();
-      // the whole work is done here, expand the node, add and remove frontier nodes and check if
-      // our parallel searches meet
-      while (nextNodeFromFrontier != null) {
-        Node<A, S> nodeToExpand = nextNodeFromFrontier;
-        Optional<SimpleEntry<Node<A, S>, Node<A, S>>> _solution = findMeetingNodes(problem,
-            searchDirection, nodeToExpand);
-        if (_solution.isPresent()) {
-          return solution(buildResultPath(_solution.get().getKey(), _solution.get().getValue(),
-              problem));
-        }
-        rememberEvent("remove from frontier " + nodeToExpand.state(), searchDirection.forwardOrBackward);
-        searchDirection.frontier.remove(nodeToExpand);
-        nextNodeFromFrontier = searchDirection.frontier.peek();
-      }
-      rememberEvent("abort search, frontier is empty", searchDirection.forwardOrBackward);
-      return null;
-    }).filter(result -> result != null).findFirst().orElse(failure());
+
+    // create runner
+    Callable<List<A>> task = () ->
+        Stream.of(fromStartToGoal, fromGoalToStart).parallel().map(searchDirection -> {
+          // initial check of the frontier
+          Node<A, S> nextNodeFromFrontier = searchDirection.frontier.peek();
+          // the whole work is done here, expand the node, add and remove frontier nodes and check if
+          // our parallel searches meet
+          while (nextNodeFromFrontier != null) {
+            Node<A, S> nodeToExpand = nextNodeFromFrontier;
+            Optional<SimpleEntry<Node<A, S>, Node<A, S>>> _solution = findMeetingNodes(problem,
+                searchDirection, nodeToExpand);
+            if (_solution.isPresent()) {
+              return solution(buildResultPath(_solution.get().getKey(), _solution.get().getValue(),
+                  problem));
+            }
+            rememberEvent("remove from frontier " + nodeToExpand.state(), searchDirection.forwardOrBackward);
+            searchDirection.frontier.remove(nodeToExpand);
+            nextNodeFromFrontier = searchDirection.frontier.peek();
+          }
+          rememberEvent("abort search, frontier is empty", searchDirection.forwardOrBackward);
+          return null;
+        }).filter(result -> result != null).findFirst().orElse(failure());
+
+    // limit concurrency to two threads
+    ForkJoinPool forkJoinPool = new ForkJoinPool(2);
+
+    // execute search
+    return forkJoinPool.submit(task).get();
   }
 
   private Optional<SimpleEntry<Node<A, S>, Node<A, S>>> findMeetingNodes(DefinedGoalStatesProblem<A, S> problem, SearchDirection
@@ -227,7 +239,11 @@ public class BiDirectionalBreadthFirstSearch<A, S> implements SearchForActionsFu
 
   @Override
   public List<A> apply(Problem<A, S> problem) {
-    return apply((DefinedGoalStatesProblem<A, S>) problem);
+    try {
+      return apply((DefinedGoalStatesProblem<A, S>) problem);
+    } catch (ExecutionException | InterruptedException e) {
+      throw new RuntimeException(e);
+    }
   }
 
   public void register(StateActionTimeLine<String, String> timeLine) {
