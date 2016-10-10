@@ -116,7 +116,6 @@ public class BiDirectionalBreadthFirstSearchTest {
         goActions);
   }
 
-
   @Test
   public void arad2neamt() {
 
@@ -154,8 +153,6 @@ public class BiDirectionalBreadthFirstSearchTest {
             new GoAction(URZICENI)
         ),
         searchSolutions(romaniaRoadMapProblem(ARAD, URZICENI)));
-
-
   }
 
   @Test
@@ -284,14 +281,6 @@ public class BiDirectionalBreadthFirstSearchTest {
           .append(key.action).append("\n");
     }
 
-   /* timeLine.stream()
-      .sorted((o1, o2) -> Long.compare(o1.time, o2.time))
-      .forEachOrdered(key -> {
-        sb.append(key.time).append(",\t")
-            .append("process-").append(key.processId).append(",\t")
-            .append(key.state).append(",\t")
-            .append(key.action).append("\n");
-    });*/
     System.out.print(sb.toString());
   }
 
