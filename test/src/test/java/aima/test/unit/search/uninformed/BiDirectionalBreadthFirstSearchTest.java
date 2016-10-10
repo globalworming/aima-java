@@ -106,17 +106,6 @@ public class BiDirectionalBreadthFirstSearchTest {
   }
 
   @Test
-  public void arad2bucharestTimeLine() {
-    List<GoAction> goActions = searchSolutions(romaniaRoadMapProblem(ARAD, BUCHAREST));
-    Assert.assertEquals(
-        Arrays.asList(
-            new GoAction(SIBIU),
-            new GoAction(FAGARAS),
-            new GoAction(BUCHAREST)),
-        goActions);
-  }
-
-  @Test
   public void arad2neamt() {
 
     List<GoAction> actual;
