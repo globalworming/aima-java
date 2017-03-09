@@ -1,8 +1,11 @@
 package aima.core.util;
 
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Random;
 import java.util.Set;
 import java.util.function.Consumer;
 
@@ -13,6 +16,14 @@ import aima.core.util.collect.CartesianProduct;
  * @author Anurag Rai
  */
 public class Util {
+
+	private static Map<Long, Random> seed2random = new HashMap<>();
+
+	public static Random getRandom(long seed) {
+		seed2random.putIfAbsent(seed, new Random(seed));
+		return seed2random.get(seed);
+	}
+
 	/**
 	 * Get the first element from a list.
 	 * 
@@ -78,4 +89,18 @@ public class Util {
 			argConsumer.accept(argsIt.next());
 		}
 	}
+
+	/**
+	 * Compares two doubles for equality.
+	 * @param a the first double.
+	 * @param b the second double.
+	 * @return true if both doubles contain the same value or the absolute deviation between them is below {@code EPSILON}.
+	 */
+	public static boolean compareDoubles(double a, double b) {
+		if(Double.isNaN(a) && Double.isNaN(b)) return true;
+		final double EPSILON = 0.000000000001;
+		if(!Double.isInfinite(a) && !Double.isInfinite(b)) return Math.abs(a-b) <= EPSILON;
+		return a == b;
+	}
+
 }

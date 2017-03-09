@@ -51,4 +51,12 @@ public class Point2D {
 		
 		return total_distance ;
 	}
+
+	@Override
+	public String toString() {
+		return "Point2D{" +
+				"x=" + x +
+				", y=" + y +
+				'}';
+	}
 }
