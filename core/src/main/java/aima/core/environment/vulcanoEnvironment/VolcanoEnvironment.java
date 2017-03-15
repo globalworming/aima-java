@@ -1,6 +1,5 @@
 package aima.core.environment.vulcanoEnvironment;
 
-import aima.core.agent.api.Sensor;
 import aima.core.util.datastructure.Point2D;
 
 import java.util.ArrayList;
@@ -17,10 +16,10 @@ import java.util.List;
  */
 public class VolcanoEnvironment {
 
-  private MonteCarloLocalizationAgent agent;
+  private VolcanoAgent agent;
   private AgentState agentState;
 
-  private List<MyHeatSource> heatSources;
+  private List<HeatSource> heatSources;
   private final RobotBase robotRepairBase;
 
   {
@@ -29,13 +28,13 @@ public class VolcanoEnvironment {
     Point2D p3 = new Point2D(0.1, 0.6);
     Point2D pStation = new Point2D(0.5, 0.5);
     heatSources = new ArrayList<>(3);
-    heatSources.add(new MyHeatSource(p1, 0.9));
-    heatSources.add(new MyHeatSource(p2, 0.8));
-    heatSources.add(new MyHeatSource(p3, 0.3));
+    heatSources.add(new HeatSource(p1, 0.9));
+    heatSources.add(new HeatSource(p2, 0.8));
+    heatSources.add(new HeatSource(p3, 0.3));
     robotRepairBase = new RobotBase(pStation);
   }
 
-  public void putAgent(MonteCarloLocalizationAgent a, AgentState s) {
+  public void putAgent(VolcanoAgent a, AgentState s) {
     this.agent = a;
     this.agentState = s;
   }
@@ -46,7 +45,7 @@ public class VolcanoEnvironment {
 
   private double heatAtPosition(Point2D position) {
     double heat = 0;
-    for (MyHeatSource heatSource : heatSources) {
+    for (HeatSource heatSource : heatSources) {
       heat += heatSource.temperature - ((double) heatSource.position.distance(position)) / 10;
     }
     return Math.max(heat, 0);
@@ -66,37 +65,17 @@ public class VolcanoEnvironment {
 
   public AgentPercept generatePercept(AgentState _agentState) {
     final AgentPercept.Builder b = new AgentPercept.Builder();
-    // in case we want to mess with sensors later
-    for (Sensor sensor : agent.getSensors()) {
-      if (sensor instanceof MonteCarloLocalizationAgent.Heat) {
-        b.setHeat(approximateHeat(_agentState));
-      }
-      if (sensor instanceof MonteCarloLocalizationAgent.RepairBaseDistance) {
-        b.setDistanceToRepairBase(unreliableDistance(
-            _agentState.getPosition(), robotRepairBase.position));
-      }
-    }
+    b.setHeat(approximateHeat(_agentState));
+    b.setDistanceToRepairBase(
+        unreliableDistance(_agentState.getPosition(), robotRepairBase.position));
     return b.build();
   }
 
-  public class MyMapDimensions {
-    public final double width;
-    public final double height;
-
-    MyMapDimensions(double width, double height) {
-      if (width <= 0 || height <=0) {
-        throw new UnsupportedOperationException();
-      }
-      this.width = width;
-      this.height = height;
-    }
-  }
-
-  private class MyHeatSource {
+  private class HeatSource {
     final Point2D position;
     final double temperature;
 
-    MyHeatSource(Point2D p, double k) {
+    HeatSource(Point2D p, double k) {
       position = p;
       temperature = k;
     }

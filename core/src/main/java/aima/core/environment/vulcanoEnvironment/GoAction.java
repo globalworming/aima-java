@@ -29,7 +29,7 @@ public class GoAction {
   /**
    * will create a {@link GoAction} if the randomly created one is within distance. Otherwise the
    * action is "don't move at all". This leads to good approximated
-   * {@link MonteCarloLocalizationAgent.MyBelief}s to not change much, while bad approximations
+   * {@link VolcanoAgent.MyBelief}s to not change much, while bad approximations
    * can change a lot
    *
    * @param distance
